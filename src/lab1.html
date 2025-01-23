@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab1</title>
+    <style>
+        #controls {
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        button {
+            margin: 5px;
+        }
+        #color-input {
+            margin: 5px;
+        }
+        canvas {
+            padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            width: 500px;
+            height: 500px;
+        }
+    </style>
+    <canvas id="webgl-canvas" width="500" height="500"></canvas>
+</head>
+<body>
+<div id="controls">
+    <button onclick="setShape('p')">Point</button>
+    <button onclick="setShape('l')">Line</button>
+    <button onclick="setShape('t')">Triangle</button>
+    <button onclick="setShape('r')">Rectangle</button>
+    <button onclick="setShape('d')">Disk</button>
+    <button onclick="setColor([1, 0, 0, 1])">Red</button>
+    <button onclick="setColor([0, 1, 0, 1])">Green</button>
+    <button onclick="setColor([0, 0, 1, 1])">Blue</button>
+    <input id="color-input" type="text" placeholder="Enter RGB (e.g., 255,0,0)">
+    <button onclick="setCustomColor()">Set Custom Color</button>
+    <button onclick="clearCanvas()">Clear</button>
+</div>
+<script>
+const vertexShaderSource = `
+    attribute vec2 aPosition;
+    uniform vec2 dim;
+    vec2 transformedPosition;
+    uniform vec4 vColor;
+    varying vec4 fColor;
+
+    void main() {
+        fColor = vColor;
+        transformedPosition =(vec2(2.0,-2.0) * aPosition) / dim + vec2(-1.0,1.0);
+        gl_Position = vec4(transformedPosition, 0.0, 1.0); 
+        gl_PointSize = 5.0;
+    }
+`;
+</script>
+<script>
+const fragmentShaderSource = `
+    precision mediump float;
+    varying vec4 fColor;
+
+    void main() {
+        gl_FragColor = fColor; 
+    }
+`;
+</script>
+<script type="text/javascript" src="setupShader.js"></script>
+
+<script>
+
+// Button functions
+function setShape(shape) {
+    currentShape = shape;
+}
+function setColor(color) {
+    currentColor = color;
+}
+function setCustomColor() {
+    const colorInput = document.getElementById('color-input').value;
+    const rgb = colorInput.split(',').map(Number);
+    if (rgb.length === 3 && rgb.every(c => c >= 0 && c <= 255)) {
+        currentColor = [rgb[0] / 255, rgb[1] / 255, rgb[2] / 255, 1];
+    } else {
+        alert('Please enter valid RGB values between 0 and 255');
+    }
+}
+function clearCanvas() {
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    // TODO - Clear the memory for shapes (1')
+}
+
+// Pass Canvas Dimensions to Shader
+const dimLocation = gl.getUniformLocation(program, 'dim');
+gl.uniform2f(dimLocation, canvas.width, canvas.height);
+
+// Init Position buffer object
+const positionBuffer = gl.createBuffer();
+const aPositionLocation = gl.getAttribLocation(program, 'aPosition');
+gl.enableVertexAttribArray(aPositionLocation);
+
+// State variables
+let currentShape = 'p'; // Default shape: point
+let currentColor = [1, 0, 0, 1]; // Default color: red
+let numPoint=0;
+// let numLine=0;
+// let numTriangle=0;
+// let numSquare=0;
+// let numDisk=0;
+
+const vertices = [];
+// const line_vertices = [];
+
+// Shape drawing functions
+function addPoint(x, y) {
+    vertices.push(x, y);
+    numPoint ++;
+    // TODO - Color for Point (1')
+}
+
+function addLine(x, y) {
+    // TODO - Geometry and Color for Line (1')
+    // To draw a line, click on the canvas to specify the start point and end point.
+    // Each line is created after two points are clicked.
+}
+
+function addTriangle(x, y) {
+    // TODO - Geometry and Color for Triangle (1')
+    // To draw triangles, click on the canvas to specify the vertices.
+    // Each triangle is created after every three points are clicked.
+}
+
+function addSquare(x, y) {
+    // TODO - Geometry and Color for Square (1')
+    // To draw squares, click on the canvas to place the center of the square at the clicked position.
+    // You can specify the size of the square as desired.
+}
+
+function addDisk(x, y) {
+    // TODO - Geometry and Color for Disk (1')
+    // To draw disks, click on the canvas to place the center of the disk at the clicked position.
+    // You can specify the radius of the disk as desired.
+}
+
+function draw() {
+    // WebGL drawing are not incremental,
+    // You should keep all previous geometry data 
+    // and redraw everything when calling draw()
+    gl.clearColor(1, 1, 0.75, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // TODO - Vertex Colors (1')
+    // Currently colors are uniform, change the corresponding code to make different colors for shapes
+    // Line and Triangle colors should be per vertex
+    // Disk and Squre colors should be per shape
+    const colorLocation = gl.getUniformLocation(program, 'vColor');
+    gl.uniform4fv(colorLocation, currentColor);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.vertexAttribPointer(aPositionLocation, 2, gl.FLOAT, false, 0, 0);
+
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    gl.drawArrays(gl.POINTS, 0, vertices.length/2);
+
+    // TODO - Draw other shapes (2')
+    // You can change buffer data this way:
+    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(line_vertices), gl.STATIC_DRAW);
+    // gl.drawArrays(gl.LINES, 0, line_vertices.length/2);
+    // Or you can use drawElements with indices
+}
+
+// Mouse click event handler
+canvas.addEventListener('mousedown', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    switch (currentShape) {
+        case 'p':
+            addPoint(x, y);
+            break;
+        case 'l':
+            addLine(x, y);
+            break;
+        case 't':
+            addTriangle(x, y);
+            break;
+        case 'q':
+            addSquare(x, y);
+            break;
+        case 'd':
+            addDisk(x, y);
+            break;
+    }
+    draw();
+});
+
+// Clear the canvas
+gl.viewport(0, 0, canvas.width, canvas.height);
+gl.clearColor(1, 1, 0.75, 1);
+gl.clear(gl.COLOR_BUFFER_BIT);
+</script>
+</body>
+</html>
