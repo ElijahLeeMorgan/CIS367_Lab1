@@ -93,7 +93,17 @@ function setCustomColor() {
 }
 function clearCanvas() {
     gl.clear(gl.COLOR_BUFFER_BIT);
-    // TODO - Clear the memory for shapes (1')
+    pointVert = [];
+    lineVert = [];
+    triangleVert = [];
+    squareVert = [];
+    diskVert = [];
+
+    pointCol = [];
+    lineCol = [];
+    triangleCol = [];
+    squareCol = [];
+    diskCol = [];
 }
 
 // Pass Canvas Dimensions to Shader
@@ -109,17 +119,47 @@ gl.enableVertexAttribArray(aPositionLocation);
 let currentShape = 'p'; // Default shape: point
 let currentColor = [1, 0, 0, 1]; // Default color: red
 let numPoint=0;
-// let numLine=0;
-// let numTriangle=0;
-// let numSquare=0;
-// let numDisk=0;
+let numLine=0;
+let numTriangle=0;
+let numSquare=0;
+let numDisk=0;
 
-const vertices = [];
-// const line_vertices = [];
+const pointVert = [];
+const lineVert = [];
+const triangleVert = [];
+const squareVert = [];
+const diskVert = [];
+
+const pointCol = [];
+const lineCol = [];
+const triangleCol = [];
+const squareCol = [];
+const diskCol = [];
+
+// Shape drawing helper functions
+// --Start AI code--
+function genCirclePoints(x, y, radius, numPoints) {
+    if (numPoints < 3 || radius <= 0) {
+        return [];
+    }
+
+    const points = [];
+    for (let i = 0; i < numPoints; i++) {
+        const angle = Math.PI * 2 * i / numPoints;
+        const px = x + Math.cos(angle) * radius;
+        const py = y + Math.sin(angle) * radius;
+        pointCol.push(currentColor);
+        pointCol.push(currentColor);
+        points.push(px, py);
+    }
+    return points;
+}
+// --End AI code--
 
 // Shape drawing functions
 function addPoint(x, y) {
-    vertices.push(x, y);
+    pointVert.push(x, y);
+    pointCol.push(currentColor);
     numPoint ++;
     // TODO - Color for Point (1')
 }
@@ -128,24 +168,39 @@ function addLine(x, y) {
     // TODO - Geometry and Color for Line (1')
     // To draw a line, click on the canvas to specify the start point and end point.
     // Each line is created after two points are clicked.
+    lineVert.push(x, y);
+    lineCol.push(currentColor);
+    numLine = Math.floor(lineVert.length/2);
 }
 
 function addTriangle(x, y) {
     // TODO - Geometry and Color for Triangle (1')
     // To draw triangles, click on the canvas to specify the vertices.
     // Each triangle is created after every three points are clicked.
+    triangleVert.push(x, y);
+    triangleCol.push(currentColor);
+    numTriangle = Math.floor(lineVert.length/3);
 }
 
-function addSquare(x, y) {
+function addSquare(x, y, radius) {
     // TODO - Geometry and Color for Square (1')
     // To draw squares, click on the canvas to place the center of the square at the clicked position.
     // You can specify the size of the square as desired.
+
+    squareVert.push(genCirclePoints(x, y, radius, 4))
+    numSquare ++;
 }
 
 function addDisk(x, y) {
     // TODO - Geometry and Color for Disk (1')
     // To draw disks, click on the canvas to place the center of the disk at the clicked position.
     // You can specify the radius of the disk as desired.
+    
+    // May have to include center point in the diskVert array.
+    // If there's a hole in the middle of the disk, uncomment this.
+    //diskVert.push(x, y); // Pushes center point first.
+    diskVert.push(genCirclePoints(x, y, 10, 100));
+    numDisk ++;
 }
 
 function draw() {
@@ -155,24 +210,61 @@ function draw() {
     gl.clearColor(1, 1, 0.75, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // TODO - Vertex Colors (1')
-    // Currently colors are uniform, change the corresponding code to make different colors for shapes
-    // Line and Triangle colors should be per vertex
-    // Disk and Squre colors should be per shape
-    const colorLocation = gl.getUniformLocation(program, 'vColor');
-    gl.uniform4fv(colorLocation, currentColor);
 
+    // --Start AI Code--
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.vertexAttribPointer(aPositionLocation, 2, gl.FLOAT, false, 0, 0);
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    gl.drawArrays(gl.POINTS, 0, vertices.length/2);
+    // Draw points
+    if (pointVert.length > 0) {
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointVert), gl.STATIC_DRAW);
+        for (let i = 0; i < pointCol.length; i++) {
+            const colorLocation = gl.getUniformLocation(program, 'vColor');
+            gl.uniform4fv(colorLocation, pointCol[i]);
+            gl.drawArrays(gl.POINTS, i, 1);
+        }
+    }
 
-    // TODO - Draw other shapes (2')
-    // You can change buffer data this way:
-    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(line_vertices), gl.STATIC_DRAW);
-    // gl.drawArrays(gl.LINES, 0, line_vertices.length/2);
-    // Or you can use drawElements with indices
+    // Draw lines
+    if (lineVert.length > 0) {
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineVert), gl.STATIC_DRAW);
+        for (let i = 0; i < lineCol.length; i += 2) {
+            const colorLocation = gl.getUniformLocation(program, 'vColor');
+            gl.uniform4fv(colorLocation, lineCol[i]);
+            gl.drawArrays(gl.LINES, i, 2);
+        }
+    }
+
+    // Draw triangles
+    if (triangleVert.length > 0) {
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVert), gl.STATIC_DRAW);
+        for (let i = 0; i < triangleCol.length; i += 3) {
+            const colorLocation = gl.getUniformLocation(program, 'vColor');
+            gl.uniform4fv(colorLocation, triangleCol[i]);
+            gl.drawArrays(gl.TRIANGLES, i, 3);
+        }
+    }
+
+    // Draw squares
+    if (squareVert.length > 0) {
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(squareVert.flat()), gl.STATIC_DRAW);
+        for (let i = 0; i < squareCol.length; i++) {
+            const colorLocation = gl.getUniformLocation(program, 'vColor');
+            gl.uniform4fv(colorLocation, squareCol[i]);
+            gl.drawArrays(gl.TRIANGLE_FAN, i * 4, 4);
+        }
+    }
+
+    // Draw disks
+    if (diskVert.length > 0) {
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(diskVert.flat()), gl.STATIC_DRAW);
+        for (let i = 0; i < diskCol.length; i++) {
+            const colorLocation = gl.getUniformLocation(program, 'vColor');
+            gl.uniform4fv(colorLocation, diskCol[i]);
+            gl.drawArrays(gl.TRIANGLE_FAN, i * 100, 100);
+        }
+    }
+    // --End AI Code--
 }
 
 // Mouse click event handler
@@ -192,7 +284,7 @@ canvas.addEventListener('mousedown', (event) => {
             addTriangle(x, y);
             break;
         case 'q':
-            addSquare(x, y);
+            addSquare(x, y, 10);
             break;
         case 'd':
             addDisk(x, y);
