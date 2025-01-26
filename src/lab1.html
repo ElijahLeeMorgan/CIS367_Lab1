@@ -93,17 +93,18 @@ function setCustomColor() {
 }
 function clearCanvas() {
     gl.clear(gl.COLOR_BUFFER_BIT);
-    pointVert = [];
-    lineVert = [];
-    triangleVert = [];
-    squareVert = [];
-    diskVert = [];
+    pointVert.clear();
+    lineVert.clear();
+    triangleVert.clear();
+    squareVert.clear();
+    diskVert.clear();
 
-    pointCol = [];
-    lineCol = [];
-    triangleCol = [];
-    squareCol = [];
-    diskCol = [];
+    pointCol.clear();
+    lineCol.clear();
+    triangleCol.clear();
+    squareCol.clear();
+    diskCol.clear();
+    // TODO - Clear the memory for shapes (1')
 }
 
 // Pass Canvas Dimensions to Shader
@@ -210,61 +211,24 @@ function draw() {
     gl.clearColor(1, 1, 0.75, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
+    // TODO - Vertex Colors (1')
+    // Currently colors are uniform, change the corresponding code to make different colors for shapes
+    // Line and Triangle colors should be per vertex
+    // Disk and Squre colors should be per shape
+    const colorLocation = gl.getUniformLocation(program, 'vColor');
+    gl.uniform4fv(colorLocation, currentColor);
 
-    // --Start AI Code--
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.vertexAttribPointer(aPositionLocation, 2, gl.FLOAT, false, 0, 0);
 
-    // Draw points
-    if (pointVert.length > 0) {
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointVert), gl.STATIC_DRAW);
-        for (let i = 0; i < pointCol.length; i++) {
-            const colorLocation = gl.getUniformLocation(program, 'vColor');
-            gl.uniform4fv(colorLocation, pointCol[i]);
-            gl.drawArrays(gl.POINTS, i, 1);
-        }
-    }
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    gl.drawArrays(gl.POINTS, 0, vertices.length/2);
 
-    // Draw lines
-    if (lineVert.length > 0) {
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineVert), gl.STATIC_DRAW);
-        for (let i = 0; i < lineCol.length; i += 2) {
-            const colorLocation = gl.getUniformLocation(program, 'vColor');
-            gl.uniform4fv(colorLocation, lineCol[i]);
-            gl.drawArrays(gl.LINES, i, 2);
-        }
-    }
-
-    // Draw triangles
-    if (triangleVert.length > 0) {
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVert), gl.STATIC_DRAW);
-        for (let i = 0; i < triangleCol.length; i += 3) {
-            const colorLocation = gl.getUniformLocation(program, 'vColor');
-            gl.uniform4fv(colorLocation, triangleCol[i]);
-            gl.drawArrays(gl.TRIANGLES, i, 3);
-        }
-    }
-
-    // Draw squares
-    if (squareVert.length > 0) {
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(squareVert.flat()), gl.STATIC_DRAW);
-        for (let i = 0; i < squareCol.length; i++) {
-            const colorLocation = gl.getUniformLocation(program, 'vColor');
-            gl.uniform4fv(colorLocation, squareCol[i]);
-            gl.drawArrays(gl.TRIANGLE_FAN, i * 4, 4);
-        }
-    }
-
-    // Draw disks
-    if (diskVert.length > 0) {
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(diskVert.flat()), gl.STATIC_DRAW);
-        for (let i = 0; i < diskCol.length; i++) {
-            const colorLocation = gl.getUniformLocation(program, 'vColor');
-            gl.uniform4fv(colorLocation, diskCol[i]);
-            gl.drawArrays(gl.TRIANGLE_FAN, i * 100, 100);
-        }
-    }
-    // --End AI Code--
+    // TODO - Draw other shapes (2')
+    // You can change buffer data this way:
+    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(line_vertices), gl.STATIC_DRAW);
+    // gl.drawArrays(gl.LINES, 0, line_vertices.length/2);
+    // Or you can use drawElements with indices
 }
 
 // Mouse click event handler
