@@ -91,9 +91,26 @@ function setCustomColor() {
         alert('Please enter valid RGB values between 0 and 255');
     }
 }
-function clearCanvas() {
+function clearCanvas() { // Probably 1 Million better ways to do this, but it works.
     gl.clear(gl.COLOR_BUFFER_BIT);
-    // TODO - Clear the memory for shapes (1')
+    
+    pointVert.length = 0;
+    lineVert.length = 0;
+    triangleVert.length = 0;
+    squareVert.length = 0;
+    diskVert.length = 0;
+
+    pointCol.length = 0;
+    lineCol.length = 0;
+    triangleCol.length = 0;
+    squareCol.length = 0;
+    diskCol.length = 0;
+
+    numPoint = 0;
+    numLine = 0;
+    numTriangle = 0;
+    numSquare = 0;
+    numDisk = 0;
 }
 
 // Pass Canvas Dimensions to Shader
@@ -156,7 +173,7 @@ function addPoint(x, y) {
     pointVert.push(x, y);
     pointCol.push(...currentColor);
     numPoint ++;
-    // TODO - Color for Point (1')
+    // TODO - Color for Point (1'). Done.
 }
 
 
