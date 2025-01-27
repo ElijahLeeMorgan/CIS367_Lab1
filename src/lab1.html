@@ -50,7 +50,7 @@ const vertexShaderSource = `
     attribute vec2 aPosition;
     uniform vec2 dim;
     vec2 transformedPosition;
-    uniform vec4 vColor;
+    attribute vec4 vColor;
     varying vec4 fColor;
 
     void main() {
@@ -93,17 +93,6 @@ function setCustomColor() {
 }
 function clearCanvas() {
     gl.clear(gl.COLOR_BUFFER_BIT);
-    pointVert.clear();
-    lineVert.clear();
-    triangleVert.clear();
-    squareVert.clear();
-    diskVert.clear();
-
-    pointCol.clear();
-    lineCol.clear();
-    triangleCol.clear();
-    squareCol.clear();
-    diskCol.clear();
     // TODO - Clear the memory for shapes (1')
 }
 
@@ -115,6 +104,11 @@ gl.uniform2f(dimLocation, canvas.width, canvas.height);
 const positionBuffer = gl.createBuffer();
 const aPositionLocation = gl.getAttribLocation(program, 'aPosition');
 gl.enableVertexAttribArray(aPositionLocation);
+
+// Init Color buffer object
+const colorBuffer = gl.createBuffer();
+const aColorLocation = gl.getAttribLocation(program, 'vColor');
+gl.enableVertexAttribArray(aColorLocation);
 
 // State variables
 let currentShape = 'p'; // Default shape: point
@@ -150,7 +144,7 @@ function genCirclePoints(x, y, radius, numPoints) {
         const px = x + Math.cos(angle) * radius;
         const py = y + Math.sin(angle) * radius;
         pointCol.push(currentColor);
-        pointCol.push(currentColor);
+        //pointCol.push(currentColor); //FIXME Double check if this is needed, or an AI hallucination.
         points.push(px, py);
     }
     return points;
@@ -160,9 +154,21 @@ function genCirclePoints(x, y, radius, numPoints) {
 // Shape drawing functions
 function addPoint(x, y) {
     pointVert.push(x, y);
-    pointCol.push(currentColor);
+    pointCol.push(...currentColor);
     numPoint ++;
     // TODO - Color for Point (1')
+}
+
+
+
+// Debug helper function
+function printInfo(x, y) {
+    console.log(`Clicked at (${x}, ${y})`);
+    console.log(`Current Shape: ${currentShape}`);
+    console.log(`Current Color: ${currentColor}`);
+    console.log(`Number of Points: ${numPoint}`);
+    console.log(`JS Current Point Vertices: ${pointVert}`);
+    console.log(`JS Current Point Colors: ${pointCol}`);
 }
 
 function addLine(x, y) {
@@ -170,7 +176,7 @@ function addLine(x, y) {
     // To draw a line, click on the canvas to specify the start point and end point.
     // Each line is created after two points are clicked.
     lineVert.push(x, y);
-    lineCol.push(currentColor);
+    lineCol.push(...currentColor);
     numLine = Math.floor(lineVert.length/2);
 }
 
@@ -179,7 +185,7 @@ function addTriangle(x, y) {
     // To draw triangles, click on the canvas to specify the vertices.
     // Each triangle is created after every three points are clicked.
     triangleVert.push(x, y);
-    triangleCol.push(currentColor);
+    triangleCol.push(...currentColor);
     numTriangle = Math.floor(lineVert.length/3);
 }
 
@@ -215,14 +221,24 @@ function draw() {
     // Currently colors are uniform, change the corresponding code to make different colors for shapes
     // Line and Triangle colors should be per vertex
     // Disk and Squre colors should be per shape
-    const colorLocation = gl.getUniformLocation(program, 'vColor');
-    gl.uniform4fv(colorLocation, currentColor);
+    //const colorLocation = gl.getUniformLocation(program, 'vColor');
+    //gl.uniform4fv(colorLocation, currentColor);
 
+    // Give point colors.
+    // Takes JS color data (4 floats / vec4) and pushes it to the shader.
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    gl.vertexAttribPointer(aColorLocation, 4, gl.FLOAT, false, 0, 0);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointCol), gl.STATIC_DRAW);
+
+    // Give point positions.
+    // Takes JS point data (2 floats / vec2) and pushes it to the shader.
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.vertexAttribPointer(aPositionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointVert), gl.STATIC_DRAW);
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    gl.drawArrays(gl.POINTS, 0, vertices.length/2);
+
+    // Draw points
+    gl.drawArrays(gl.POINTS, 0, pointVert.length/2);
 
     // TODO - Draw other shapes (2')
     // You can change buffer data this way:
@@ -254,6 +270,7 @@ canvas.addEventListener('mousedown', (event) => {
             addDisk(x, y);
             break;
     }
+    printInfo(x, y); //Debugging info
     draw();
 });
 
