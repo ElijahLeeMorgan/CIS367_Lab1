@@ -81,6 +81,7 @@ function setShape(shape) {
 }
 function setColor(color) {
     currentColor = color;
+    draw();
 }
 function setCustomColor() {
     const colorInput = document.getElementById('color-input').value;
@@ -308,7 +309,6 @@ function draw() {
                 GLdraw(element.verts, element.colors, element.drawType);
                 break;
         }
-        gl.clear(colorBuffer);
     });
 
     // TODO - Vertex Colors (1')
