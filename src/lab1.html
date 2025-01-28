@@ -91,26 +91,9 @@ function setCustomColor() {
         alert('Please enter valid RGB values between 0 and 255');
     }
 }
-function clearCanvas() { // Probably 1 Million better ways to do this, but it works.
+function clearCanvas() { 
     gl.clear(gl.COLOR_BUFFER_BIT);
-    
-    pointVert.length = 0;
-    lineVert.length = 0;
-    triangleVert.length = 0;
-    squareVert.length = 0;
-    diskVert.length = 0;
-
-    pointCol.length = 0;
-    lineCol.length = 0;
-    triangleCol.length = 0;
-    squareCol.length = 0;
-    diskCol.length = 0;
-
-    numPoint = 0;
-    numLine = 0;
-    numTriangle = 0;
-    numSquare = 0;
-    numDisk = 0;
+    shapeHistory.length = 0;
 }
 
 // Pass Canvas Dimensions to Shader
@@ -127,83 +110,128 @@ const colorBuffer = gl.createBuffer();
 const aColorLocation = gl.getAttribLocation(program, 'vColor');
 gl.enableVertexAttribArray(aColorLocation);
 
-// State variables
+// State variables. Should be contained somehow, but this works.
 let currentShape = 'p'; // Default shape: point
 let currentColor = [1, 0, 0, 1]; // Default color: red
-let numPoint=0;
-let numLine=0;
-let numTriangle=0;
-let numSquare=0;
-let numDisk=0;
+let shapeHistory = []; // array of objects to be drawn
 
-const pointVert = [];
-const lineVert = [];
-const triangleVert = [];
-const squareVert = [];
-const diskVert = [];
-
-const pointCol = [];
-const lineCol = [];
-const triangleCol = [];
-const squareCol = [];
-const diskCol = [];
-
-// Shape drawing helper functions
-// --Start AI code--
-function genCirclePoints(x, y, radius, numPoints) {
-    if (numPoints < 3 || radius <= 0) {
-        return [];
+class Point {
+    constructor(x, y, color) {
+        this.name = 'Point'; //Classifer names weren't working, so I'm using instance names even though they're all the same.
+        this.verts = [x, y]; //Now I think about it, I probably could've used drawType.
+        this.colors = color;
+        this.drawType = gl.POINTS;
     }
-
-    const points = [];
-    for (let i = 0; i < numPoints; i++) {
-        const angle = Math.PI * 2 * i / numPoints;
-        const px = x + Math.cos(angle) * radius;
-        const py = y + Math.sin(angle) * radius;
-        pointCol.push(currentColor);
-        //pointCol.push(currentColor); //FIXME Double check if this is needed, or an AI hallucination.
-        points.push(px, py);
-    }
-    return points;
 }
-// --End AI code--
+
+class Line {
+    constructor(x, y, color) {
+        this.name = 'Line';
+        this.verts = [x, y]; // Only x/y sets of 2 will be rendered
+        this.colors = color; // Same applies to colors ^^
+        this.drawType = gl.LINES;
+    }
+}
+
+class Triangle {
+    constructor(x, y, color) {
+        this.name = 'Triangle';
+        this.verts = [x, y]; // Only x/y sets of 3 will be rendered
+        this.colors = color; // Same applies to colors ^^
+        this.drawType = gl.TRIANGLES;
+    }
+}
+
+class _CircleLike {
+    constructor(x, y, color, radius, numPoints, drawType) {
+        // -- Start AI code -- + Serveral generations of human and AI edits.
+        this.verts = this.genCirclePoints(x, y, radius, numPoints); // Generate vertices
+        this.colors = this.genColorArray(color, numPoints); // Generate colors
+        this.drawType = drawType; // Set draw type
+    }
+
+    genCirclePoints(x, y, radius, numPoints) {
+        if (numPoints < 3 || radius <= 0) {
+            return [];
+        }
+
+        const points = [];
+        for (let i = 0; i < numPoints; i++) {
+            const angle = (Math.PI * 2 * i) / numPoints;
+            const px = x + Math.cos(angle) * radius;
+            const py = y + Math.sin(angle) * radius;
+            points.push(px, py);
+        }
+        return points;
+    }
+
+    genColorArray(color, times) {
+        return Array(times).fill(color).flat(); // Flatten the array for consistency
+    }
+    // -- End AI code --
+}
+
+class Square extends _CircleLike {
+    constructor(x, y, color, radius) {
+        // Call parent constructor with specific parameters for a square
+        super(x, y, color, radius, 4, gl.TRIANGLE_FAN);
+        this.name = 'Square';this.name = 'Square';
+    }
+}
+
+class Disk extends _CircleLike {
+    constructor(x, y, color, radius) {
+        // Call parent constructor with specific parameters for a disk
+        super(x, y, color, radius, 100, gl.TRIANGLE_FAN);
+        this.name = 'Disk';
+    }
+}
+
+// -- Start AI code --
+function checkHistory(name) {
+    // checks if last object in shapeHistory is of the same type
+    if (shapeHistory.length === 0) {
+        return true;
+    } else {
+        return shapeHistory[shapeHistory.length - 1].name !== name;
+    }
+}
+
+function updateHistory(x, y, name, classToPush) {
+    if (checkHistory(name)) {
+        // Create a new object and push it to shapeHistory
+        shapeHistory.push(new classToPush(x, y, currentColor));
+        console.log(`New ${name} Object Created`);
+        return true;
+    } else {
+        // Update the last object in shapeHistory
+        const lastObject = shapeHistory[shapeHistory.length - 1];
+        lastObject.verts.push(x, y);
+        lastObject.colors.push(...currentColor);
+        console.log(`${name} Object Updated`);
+        return false;
+    }
+    console.log('Something went wrong!');
+}
+// -- End AI code --
 
 // Shape drawing functions
 function addPoint(x, y) {
-    pointVert.push(x, y);
-    pointCol.push(...currentColor);
-    numPoint ++;
-    // TODO - Color for Point (1'). Done.
-}
-
-
-
-// Debug helper function
-function printInfo(x, y) {
-    console.log(`Clicked at (${x}, ${y})`);
-    console.log(`Current Shape: ${currentShape}`);
-    console.log(`Current Color: ${currentColor}`);
-    console.log(`Number of Points: ${numPoint}`);
-    console.log(`JS Current Point Vertices: ${pointVert}`);
-    console.log(`JS Current Point Colors: ${pointCol}`);
+    updateHistory(x, y, Point.name, Point);
 }
 
 function addLine(x, y) {
     // TODO - Geometry and Color for Line (1')
     // To draw a line, click on the canvas to specify the start point and end point.
     // Each line is created after two points are clicked.
-    lineVert.push(x, y);
-    lineCol.push(...currentColor);
-    numLine = Math.floor(lineVert.length/2);
+    updateHistory(x, y, Line.name, Line);
 }
 
 function addTriangle(x, y) {
     // TODO - Geometry and Color for Triangle (1')
     // To draw triangles, click on the canvas to specify the vertices.
     // Each triangle is created after every three points are clicked.
-    triangleVert.push(x, y);
-    triangleCol.push(...currentColor);
-    numTriangle = Math.floor(lineVert.length/3);
+    updateHistory(x, y, Triangle.name, Triangle);
 }
 
 function addSquare(x, y, radius) {
@@ -211,8 +239,7 @@ function addSquare(x, y, radius) {
     // To draw squares, click on the canvas to place the center of the square at the clicked position.
     // You can specify the size of the square as desired.
 
-    squareVert.push(genCirclePoints(x, y, radius, 4))
-    numSquare ++;
+    updateHistory(x, y, Square.name, Square);
 }
 
 function addDisk(x, y) {
@@ -223,16 +250,66 @@ function addDisk(x, y) {
     // May have to include center point in the diskVert array.
     // If there's a hole in the middle of the disk, uncomment this.
     //diskVert.push(x, y); // Pushes center point first.
-    diskVert.push(genCirclePoints(x, y, 10, 100));
-    numDisk ++;
+    updateHistory(x, y, Disk.name, Disk);
+}
+
+// Debug helper function
+function printInfo(x, y) {
+    console.log(`Clicked at (${x}, ${y})`);
+    console.log(`Current Shape: ${currentShape}`);
+    console.log(`Current Color: ${currentColor}`);
+    //console.log(`Object History: ${shapeHistory}`);
+    console.log(`Current Object: ${shapeHistory[shapeHistory.length - 1].name}`);
+    console.log(`Current Object Vertices: ${shapeHistory[shapeHistory.length - 1].verts}`);
+    console.log(`Current Object Colors: ${shapeHistory[shapeHistory.length - 1].colors}`);
+}
+
+// WebGL helper draw function
+function GLdraw(posArr, colArr, drawType) {
+    console.log(`DRAWTYPE: ${drawType}`);
+    console.log(`COLOR ARRAY: ${colArr} LENGTH: ${colArr.length} ISARRAY: ${colArr.constructor === Array}`);
+    console.log(`POSITION ARRAY: ${posArr} LENGTH: ${posArr.length} ISARRAY: ${posArr.constructor === Array}`);
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    gl.vertexAttribPointer(aColorLocation, 4, gl.FLOAT, false, 0, 0);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colArr), gl.STATIC_DRAW);
+    
+    // Give point positions.
+    // Takes JS point data (2 floats / vec2) and pushes it to the shader.
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    gl.vertexAttribPointer(aPositionLocation, 2, gl.FLOAT, false, 0, 0);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(posArr), gl.STATIC_DRAW);
+
+
+    // Draw points
+    gl.drawArrays(drawType, 0, posArr.length/2);
+
 }
 
 function draw() {
-    // WebGL drawing are not incremental,
-    // You should keep all previous geometry data 
-    // and redraw everything when calling draw()
     gl.clearColor(1, 1, 0.75, 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    shapeHistory.forEach(element => {
+        console.log(`${element.name} Drawn`);
+        switch (element.name) {
+            case 'Point':
+                GLdraw(element.verts, element.colors, element.drawType);
+                break;
+            case 'Line':
+                GLdraw(element.verts, element.colors, element.drawType);
+                break;
+            case 'Triangle':
+                GLdraw(element.verts, element.colors, element.drawType);
+                break;
+            case 'Square':
+                GLdraw(element.verts, element.colors, element.drawType);
+                break;
+            case 'Disk':
+                GLdraw(element.verts, element.colors, element.drawType);
+                break;
+        }
+        gl.clear(colorBuffer);
+    });
 
     // TODO - Vertex Colors (1')
     // Currently colors are uniform, change the corresponding code to make different colors for shapes
@@ -241,21 +318,17 @@ function draw() {
     //const colorLocation = gl.getUniformLocation(program, 'vColor');
     //gl.uniform4fv(colorLocation, currentColor);
 
-    // Give point colors.
-    // Takes JS color data (4 floats / vec4) and pushes it to the shader.
-    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    gl.vertexAttribPointer(aColorLocation, 4, gl.FLOAT, false, 0, 0);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointCol), gl.STATIC_DRAW);
+    //TODO, handle out of order shapes.
+    // Idea 1: Use a aray to keep track of type of shape, and GL position. gl.drawArrays(drawType, startingPos, countToStopAt)
+    // Idea 2: make seprate buffers for all shapes, and draw them in order.
+    
+    //NOTES
+    // Idea 1 is cool, but sounds overengineered. Idea 2 is simple, but may be slow.
+    // Idea 2 may draw shapes in incorrect order.
+    // Attempting idea 1 first.
 
-    // Give point positions.
-    // Takes JS point data (2 floats / vec2) and pushes it to the shader.
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.vertexAttribPointer(aPositionLocation, 2, gl.FLOAT, false, 0, 0);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(pointVert), gl.STATIC_DRAW);
-
-
-    // Draw points
-    gl.drawArrays(gl.POINTS, 0, pointVert.length/2);
+    //GLdraw(pointVert, pointCol, gl.POINTS, 2, 0);
+    //GLdraw(lineVert, lineCol, gl.LINES, 2, pointVert.length/2);
 
     // TODO - Draw other shapes (2')
     // You can change buffer data this way:
