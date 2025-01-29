@@ -81,7 +81,6 @@ function setShape(shape) {
 }
 function setColor(color) {
     currentColor = color;
-    draw();
 }
 function setCustomColor() {
     const colorInput = document.getElementById('color-input').value;
@@ -199,6 +198,11 @@ function checkHistory(name) {
 }
 
 function updateHistory(x, y, name, classToPush) {
+    // -- Start AI code --
+    // I'm goign to be 1000% honest, I've been hunting this bug for hours. I know this isn't the best fix, but I'm just relieved to have a working version.
+    // Subject to change, but commiting for now.
+    currentColor = currentColor.flat(); // Flatten the array for consistency
+    // -- End AI code --
     if (checkHistory(name)) {
         // Create a new object and push it to shapeHistory
         shapeHistory.push(new classToPush(x, y, currentColor));
@@ -259,7 +263,6 @@ function printInfo(x, y) {
     console.log(`Clicked at (${x}, ${y})`);
     console.log(`Current Shape: ${currentShape}`);
     console.log(`Current Color: ${currentColor}`);
-    //console.log(`Object History: ${shapeHistory}`);
     console.log(`Current Object: ${shapeHistory[shapeHistory.length - 1].name}`);
     console.log(`Current Object Vertices: ${shapeHistory[shapeHistory.length - 1].verts}`);
     console.log(`Current Object Colors: ${shapeHistory[shapeHistory.length - 1].colors}`);
@@ -282,7 +285,7 @@ function GLdraw(posArr, colArr, drawType) {
 
 
     // Draw points
-    gl.drawArrays(drawType, 0, posArr.length/2);
+    gl.drawArrays(drawType, 0, Math.floor(posArr.length/2));
 
 }
 
