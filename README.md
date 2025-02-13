@@ -1,4 +1,4 @@
-# WebGL - Lab2: Introduciton to 2D Drawing
+# WebGL - Lab1: Introduciton to 2D Drawing
 Elijah Morgan\
 CIS 367 01
 
